@@ -6,13 +6,13 @@ import * as Device from "expo-device";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import HomeScreen    from "./screens/HomeScreen";
+import HomeScreen     from "./screens/HomeScreen";
 import SettingsScreen from "./screens/SettingsScreen";
+import AlarmScreen    from "./screens/AlarmScreen";
 import { registerWaveCheckTask } from "./tasks/waveCheckTask";
 
 const Stack = createNativeStackNavigator();
 
-// Show notifications even when app is in foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -22,10 +22,7 @@ Notifications.setNotificationHandler({
 });
 
 async function registerForPushNotifications() {
-  if (!Device.isDevice) {
-    console.warn("Push notifications only work on physical devices.");
-    return null;
-  }
+  if (!Device.isDevice) return null;
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -35,10 +32,7 @@ async function registerForPushNotifications() {
     finalStatus = status;
   }
 
-  if (finalStatus !== "granted") {
-    console.warn("Push notification permission not granted.");
-    return null;
-  }
+  if (finalStatus !== "granted") return null;
 
   const projectId =
     Constants.expoConfig?.extra?.eas?.projectId ??
@@ -48,32 +42,40 @@ async function registerForPushNotifications() {
     projectId ? { projectId } : undefined
   );
   const token = tokenData.data;
-
-  // Save token locally so SettingsScreen can send it to the server
   await AsyncStorage.setItem("expoPushToken", token);
-  console.log("Expo push token:", token);
   return token;
 }
 
 export default function App() {
   const notificationListener = useRef();
   const responseListener     = useRef();
+  const navigationRef        = useRef();
 
   useEffect(() => {
     registerForPushNotifications();
     registerWaveCheckTask();
 
-    // Listen for incoming notifications while app is open
     notificationListener.current = Notifications.addNotificationReceivedListener(
       (notification) => {
-        console.log("Notification received:", notification);
+        // When notification fires while app is open — go directly to AlarmScreen
+        const data = notification.request.content.data;
+        navigationRef.current?.navigate("Alarm", {
+          isGood:    data?.isGood,
+          alarmTime: data?.alarmTime,
+          waveData:  data?.waveData,
+        });
       }
     );
 
-    // Listen for user tapping a notification
     responseListener.current = Notifications.addNotificationResponseReceivedListener(
       (response) => {
-        console.log("Notification tapped:", response);
+        // When user taps the notification — go to AlarmScreen
+        const data = response.notification.request.content.data;
+        navigationRef.current?.navigate("Alarm", {
+          isGood:    data?.isGood,
+          alarmTime: data?.alarmTime,
+          waveData:  data?.waveData,
+        });
       }
     );
 
@@ -84,17 +86,15 @@ export default function App() {
   }, []);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
         screenOptions={{
-          headerStyle:      { backgroundColor: "#0a1929" },
-          headerTintColor:  "#7eb8f7",
-          headerTitleStyle: { fontWeight: "bold" },
-          headerShown:      false,
+          headerShown: false,
         }}
       >
         <Stack.Screen name="Home"     component={HomeScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="Alarm"    component={AlarmScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

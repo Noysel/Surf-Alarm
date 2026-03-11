@@ -12,6 +12,7 @@
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.9.26",
     "expo": "~54.0.0",
+    "expo-av": "~15.0.2",
     "expo-background-fetch": "~13.0.6",
     "expo-constants": "~17.0.8",
     "expo-dev-client": "~6.0.20",

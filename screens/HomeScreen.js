@@ -8,13 +8,35 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { SERVER_URL } from "../constants/config";
 
 // Schedule a local notification for tomorrow at the given time (e.g. "06:00")
+async function setupAlarmChannel() {
+  if (Platform.OS === "android") {
+    await Notifications.deleteNotificationChannelAsync("surf-alarm-v2").catch(() => {});
+    await Notifications.setNotificationChannelAsync("surf-alarm-v2", {
+      name: "Surf Alarm",
+      importance: Notifications.AndroidImportance.MAX,
+      sound: "default",
+      vibrationPattern: [0, 1000, 500, 1000, 500, 1000],
+      enableVibrate: true,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      bypassDnd: true,
+      audioAttributes: {
+        usage: Notifications.AndroidAudioUsage.ALARM,
+        contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+        flags: { enforceAudibility: true },
+      },
+    });
+  }
+}
+
 async function scheduleAlarmNotification(alarmTime, isGood, waveData) {
+  await setupAlarmChannel();
   await Notifications.cancelAllScheduledNotificationsAsync();
 
   const [hours, minutes] = alarmTime.split(":").map(Number);
@@ -27,7 +49,10 @@ async function scheduleAlarmNotification(alarmTime, isGood, waveData) {
     content: {
       title: isGood ? "Waves are good! Time to surf!" : "Waves are flat. Sleep in.",
       body: `Height: ${waveData.waveHeight}m | Period: ${waveData.wavePeriod}s | Wind: ${waveData.windSpeed} km/h`,
-      sound: true,
+      sound: "default",
+      priority: "max",
+      data: { isGood, alarmTime, waveData },
+      android: { channelId: "surf-alarm-v2" },
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
