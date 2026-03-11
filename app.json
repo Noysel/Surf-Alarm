@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "SurfAlarm",
+    "slug": "surf-alarm",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.surfalarm.app"
+    },
+    "android": {
+      "package": "com.surfalarm.app"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "color": "#1a6fc4"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2f5dbcf6-3a5c-445b-aead-62f24fb15859"
+      }
+    }
+  }
+}
